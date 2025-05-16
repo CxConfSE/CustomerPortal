@@ -62,30 +62,34 @@ namespace dvcsharp_core_api
       [HttpPost]
       public IActionResult Post([FromBody] PasswordResetRequest passwordResetRequest)
       {
-         if(!ModelState.IsValid)
-         {
-            return BadRequest(ModelState);
-         }
-
-         var exitingUser = _context.Users.
-            Where(b => b.email == passwordResetRequest.email).
-            FirstOrDefault();
-
-         if(exitingUser == null) {
-            ModelState.AddModelError("email", "Email address does not exist");
-            return BadRequest(ModelState);
-         }
-
-         var md5 = MD5.Create();
-         var hash = md5.ComputeHash(System.Text.Encoding.ASCII.GetBytes(passwordResetRequest.email));
-
-         passwordResetRequest.key = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-         passwordResetRequest.createdAt = passwordResetRequest.updatedAt = DateTime.Now;
-
-         _context.PasswordResetRequests.Add(passwordResetRequest);
-         _context.SaveChanges();
-
-         return Ok("An email with password reset link has been sent.");
+          if (!ModelState.IsValid)
+          {
+              return BadRequest(ModelState);
+          }
+      
+          var existingUser = _context.Users
+              .Where(b => b.email == passwordResetRequest.email)
+              .FirstOrDefault();
+      
+          if (existingUser == null)
+          {
+              ModelState.AddModelError("email", "Email address does not exist");
+              return BadRequest(ModelState);
+          }
+      
+          // Generate a secure, random reset key
+          string resetKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower(); // 64-char hex string
+      
+          passwordResetRequest.key = resetKey;
+          passwordResetRequest.createdAt = passwordResetRequest.updatedAt = DateTime.Now;
+      
+          _context.PasswordResetRequests.Add(passwordResetRequest);
+          _context.SaveChanges();
+      
+          // Optional: Trigger an email with the reset link here
+          // e.g., SendPasswordResetEmail(existingUser.email, resetKey);
+      
+          return Ok("An email with a password reset link has been sent.");
       }
    }
 }

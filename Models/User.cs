@@ -68,12 +68,28 @@ namespace dvcsharp_core_api.Models
             Jwt.JwtSecurityTokenHandler().WriteToken(token));
       }
 
-      private static string getHashedPassword(string password)
+      public static string GetHashedPassword(string password)
       {
-         var md5 = MD5.Create();
-         var hash = md5.ComputeHash(System.Text.Encoding.ASCII.GetBytes(password));
-
-         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+          // Generate a random salt
+          byte[] salt = new byte[16];
+          using (var rng = RandomNumberGenerator.Create())
+          {
+              rng.GetBytes(salt);
+          }
+      
+          // Derive the key
+          using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100000, HashAlgorithmName.SHA256))
+          {
+              byte[] hash = pbkdf2.GetBytes(32);
+      
+              // Combine salt + hash for storage
+              byte[] hashBytes = new byte[48];
+              Array.Copy(salt, 0, hashBytes, 0, 16);
+              Array.Copy(hash, 0, hashBytes, 16, 32);
+      
+              // Return as base64 string
+              return Convert.ToBase64String(hashBytes);
+          }
       }
 
       public static AuthorizationResponse authorizeCreateAccessToken(GenericDataContext _context, 
